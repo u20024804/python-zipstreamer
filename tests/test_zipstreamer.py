@@ -28,7 +28,7 @@ class DummyFile(object):
         self.cur += size
 
         if len(self.buf) != size:
-            self.buf = ''.join(b'a' for i in range(size))
+            self.buf = b''.join(b'a' for i in range(size))
 
         return self.buf
 
@@ -171,6 +171,71 @@ class TestZipStream(unittest.TestCase):
     #             size += len(chunk)
 
     #     self.assertEqual(size, 5 * 1024 * 1024 * 1024 + 260)
+
+    def test_generate_6_1G_zip64(self):
+        f1 = DummyFile(1 * 1024 * 1024 * 1024)
+        f2 = DummyFile(1 * 1024 * 1024 * 1024)
+        f3 = DummyFile(1 * 1024 * 1024 * 1024)
+        f4 = DummyFile(1 * 1024 * 1024 * 1024)
+        f5 = DummyFile(1 * 1024 * 1024 * 1024)
+        f6 = DummyFile(1 * 1024 * 1024 * 1024)
+
+        z = ZipStream(files=[
+            ZipFile('file1.txt', None, lambda: f1, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file2.txt', None, lambda: f2, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file3.txt', None, lambda: f3, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file4.txt', None, lambda: f4, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file5.txt', None, lambda: f5, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file6.txt', None, lambda: f6, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+        ])
+
+        size = 0
+
+        with open('test_6_1G.zip', 'wb') as zf:
+            for chunk in z.generate():
+                zf.write(chunk)
+                size += len(chunk)
+
+        with zipfile.ZipFile('test_6_1G.zip', 'r') as zipObj:
+            zipObj.extractall()
+
+    def test_generate_5G_500M_zip64(self):
+        f1 = DummyFile(5 * 1024 * 1024 * 1024)
+        f2 = DummyFile(5 * 102 * 1024 * 1024)
+
+        z = ZipStream(files=[
+            ZipFile('file1.txt', None, lambda: f1, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file2.txt', None, lambda: f2, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+        ])
+
+        size = 0
+
+        with open('test_5G_500M.zip', 'wb') as zf:
+            for chunk in z.generate():
+                zf.write(chunk)
+                size += len(chunk)
+
+        with zipfile.ZipFile('test_5G_500M.zip', 'r') as zipObj:
+            zipObj.extractall()
+
+    def test_generate_500M_5G_zip64(self):
+        f1 = DummyFile(5 * 1024 * 1024 * 1024)
+        f2 = DummyFile(5 * 102 * 1024 * 1024)
+
+        z = ZipStream(files=[
+            ZipFile('file1.txt', None, lambda: f2, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+            ZipFile('file2.txt', None, lambda: f1, datetime.datetime(2008, 11, 10, 17, 53, 59), None),
+        ])
+
+        size = 0
+
+        with open('test_500M_5G.zip', 'wb') as zf:
+            for chunk in z.generate():
+                zf.write(chunk)
+                size += len(chunk)
+
+        with zipfile.ZipFile('test_500M_5G.zip', 'r') as zipObj:
+            zipObj.extractall()
 
     def test_filename_too_long(self):
         filename = ''.join('a' for i in range(100000))
